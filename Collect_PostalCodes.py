@@ -4,23 +4,31 @@
 #
 # ----------------------------------------------------------------------------------------------------------------------
 from geopy.distance import geodesic
+import multiprocessing
 import pandas as pd
 import time
 # ----------------------------------------------------------------------------------------------------------------------
-"""
-    Notes:
-        + Understand the data that you are working with!
-            + What are the types, as well as subtypes
-            + How much memory does your main df require?
-                print(toronto_postal_codes_df.dtypes)
-                print(toronto_postal_codes_df.info(memory_usage='deep'))
 
-        + Find the postal codes closest to each centroid
-        + Be wary of number of postal codes in dataset
-            - Limit focus to postal codes that start with M (In Toronto Only)
-            - Needed preprossesing attempt
-        + Can this be sped up with better Pandas intergration / MultiProcessing?
-# """
+def find_closest_pc(centroid_df, pc_location_df, pc_name_df, num):
+    closest_pc_list = []
+    centroid_df_len = len(centroid_df)
+    counter_x = 1
+
+    for index, row_c in centroid_df.iterrows():
+        centroid_location = (row_c["Latitude"], row_c["Longitude"])
+        pc_name_df["D_To_C"] = pc_location_df.apply(lambda row: geodesic(centroid_location, (row["Latitude"], row["Longitude"])), axis=1)
+        val_list = pc_name_df["D_To_C"].tolist()
+
+        min_index = val_list.index(min(val_list))
+        closest_pc_list.append(pc_name_df["PostalCode"][min_index])
+
+        pc_name_df.drop(["D_To_C"], axis=1)
+
+        print("Worker " + str(num) + " Progress: "+ str(counter_x) + "/" + str(centroid_df_len))
+        counter_x += 1
+
+    centroid_df["Closest_PC"] = closest_postal_code
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Import Centroid Data
@@ -50,35 +58,24 @@ data_pc = {"PostalCode": pc_values}
 toronto_pc_df = pd.DataFrame(data= data_pc)
 
 # ----------------------------------------------------------------------------------------------------------------------
+if __name__ == "__main__":
+    # Data For Chunking
+    num_chunks = 9
+    len_of_df = len(centroid_data_df)
+    chunk_size = int(len_of_df / num_chunks)
+    t_val = 0
+    b_val = chunk_size
 
-# Loop Through Centroids
-closest_pc_list = []
+    # Split Centroid Dataframe Into Multiple Chunks
+    for chunk in range(num_chunks):
+        exec("df_" + str(chunk + 1) + " = centroid_data_df[" + str(t_val) + ":" + str(b_val) + "]")
+        t_val += chunk_size
+        b_val += chunk_size
 
- # For Progression Monitor
-centroid_df_len = len(centroid_data_df)
-counter_x = 1
+    # Initialize Multiprocessing Units
+    for chunk in range(num_chunks):
+        exec("p_" + str(chunk + 1) + " = multiprocessing.Process(target=find_closest_pc, args=(" + "df_" + str(chunk + 1) + ", toronto_pc_locations_df, toronto_pc_df," + str(chunk + 1) + ")) ")
 
-for index, row_c in centroid_data_df.iterrows():
-
-    # Make Variable With X, Y Of Centroid
-    centroid_location = (row_c["Latitude"], row_c["Longitude"])
-
-    # Create A DF Variable With The Distances From Postal Codes To Centroid
-    toronto_pc_df["D_To_C"] = toronto_pc_locations_df.apply(lambda row: geodesic(centroid_location, (row["Latitude"], row["Longitude"])), axis=1)
-    val_list = toronto_pc_df["D_To_C"].tolist()
-
-    # Get The Closest Postal Code
-    min_index = val_list.index(min(val_list))
-    closest_pc_list.append(toronto_pc_df["PostalCode"][min_index])
-
-    # Del Column Just Created
-    toronto_pc_df.drop(["D_To_C"], axis=1)
-
-    print("Progress: " + str(counter_x) + "/" + str(centroid_df_len))
-    counter_x += 1
-
-# Append Data To Centroid Dataframe
-centroid_data_df["Closest_PC"] = closest_postal_code
-
-# Save As CSV
-centroid_data_df.to_csv(r"C:\Users\renac\Documents\Programming\Python\GasBuddy_DataParse\Data\GB_C_2KM\Closest_PC.csv")
+    # Start Multiprocessing
+    for chunk in range(num_chunks):
+        exec("p_" + str(chunk + 1) + ".start()")
