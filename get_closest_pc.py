@@ -4,9 +4,7 @@
 #
 # ----------------------------------------------------------------------------------------------------------------------
 from functions import find_closest_pc
-from geopy.distance import geodesic
 import pandas as pd
-import time
 # ----------------------------------------------------------------------------------------------------------------------
 
 # Import Centroid Data
@@ -28,4 +26,6 @@ postal_code_data_df['Longitude'] = postal_code_data_df['Longitude'].astype('floa
 # ----------------------------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
+
+    # Find Closest Postal Codes
     find_closest_pc(centroid_data_df, postal_code_data_df)

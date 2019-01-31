@@ -5,7 +5,13 @@
 # ----------------------------------------------------------------------------------------------------------------------
 import geopy
 from geopy.distance import VincentyDistance, geodesic
-import multiprocessing
+
+from bs4 import BeautifulSoup
+import urllib3
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+import re
 import pandas as pd
 import time
 # ----------------------------------------------------------------------------------------------------------------------
@@ -93,5 +99,41 @@ def find_closest_pc(centroid_df, pc_df):
 
     # Save As CSV
     centroid_df.to_csv(r"C:\Users\renac\Documents\Programming\Python\GasBuddy_DataParse\Data\GB_C_2KM\Closest_PC.csv", index=False)
+
+# This Function Will Parse Data From GasBuddy.com
+def web_scraper(postal_code, fuel_grade):
+    path = r"C:\Users\renac\Documents\Programming\Python\Selenium\chromedriver"
+    web_url = "https://www.gasbuddy.com/home?search=" + postal_code + "&fuel=" + str(fuel_grade)
+
+    # opts = Options()
+    # opts.set_headless()
+    # assert opts.headless
+
+    # Access WebPage
+    chrome = webdriver.Chrome(executable_path=path) #, options=opts
+    chrome.get(web_url)
+
+    # Access HTML For BS4
+    html = chrome.page_source
+    soup = BeautifulSoup(html, features="lxml")
+
+    # Parse The Search Radius Of The List
+    max_distance = 1.5
+    data = soup.find_all("div", class_="styles__stationListItem___xKFP_")
+    last_result = data[-1]
+    result = str(last_result)
+    distance = re.search('class=\"styles__distanceContainer___3BcX0\">(.*)km', result).group(1)
+
+        if float(distance) > max_distance:
+            max_distance = distance
+
+        else:
+            # Find Load More & Click
+
+    print(distance)
+    time.sleep(10)
+
+    time.sleep(10)
+    chrome.close()
 
 # ----------------------------------------------------------------------------------------------------------------------
