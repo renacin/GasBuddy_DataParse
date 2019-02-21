@@ -122,40 +122,50 @@ def find_closest_pc(centroid_df, pc_df):
     # Total Time
     print("Total Time: " + str(round((time.time() - start_time), 4)) + " Seconds")
 
-# # This Function Will Parse Data From GasBuddy.com
-# def web_scraper(postal_code, fuel_grade):
-#     path = r"C:\Users\renac\Documents\Programming\Python\Selenium\chromedriver"
-#     web_url = "https://www.gasbuddy.com/home?search=" + postal_code + "&fuel=" + str(fuel_grade)
-#
-#     # opts = Options()
-#     # opts.set_headless()
-#     # assert opts.headless
-#
-#     # Access WebPage
-#     chrome = webdriver.Chrome(executable_path=path) #, options=opts
-#     chrome.get(web_url)
-#
-#     # Access HTML For BS4
-#     html = chrome.page_source
-#     soup = BeautifulSoup(html, features="lxml")
-#
-#     # Parse The Search Radius Of The List
-#     max_distance = 1.5
-#     data = soup.find_all("div", class_="styles__stationListItem___xKFP_")
-#     last_result = data[-1]
-#     result = str(last_result)
-#     distance = re.search('class=\"styles__distanceContainer___3BcX0\">(.*)km', result).group(1)
-#
-#         if float(distance) > max_distance:
-#             max_distance = distance
-#
-#         else:
-#             # Find Load More & Click
-#
-#     print(distance)
-#     time.sleep(10)
-#
-#     time.sleep(10)
-#     chrome.close()
+# This Function Will Parse Data From GasBuddy.com
+def web_scraper(postal_code, fuel_grade):
+    ext_1 = r"C:\Users\renac\Documents\Programming\Python\Selenium\Extensions\uBlock-Origin_v1.14.8.crx"
+    path = r"C:\Users\renac\Documents\Programming\Python\Selenium\chromedriver"
+    web_url = "https://www.gasbuddy.com/home?search=" + postal_code + "&fuel=" + str(fuel_grade)
+
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_extension(ext_1)
+    chrome_options.add_argument("--disable-infobars")
+    chrome = webdriver.Chrome(executable_path=path, chrome_options=chrome_options)
+    chrome.get(web_url)
+
+    while True:
+
+        try:
+            # Access HTML For BS4
+            chrome.implicitly_wait(20)
+
+            # Need To Wait For Page To Load Properly
+            time.sleep(2)
+            html = chrome.page_source
+            soup = BeautifulSoup(html, features="lxml")
+
+            # Find Search Radius
+            distances = re.findall('>(.{3,4})km', str(soup))
+
+            # If Search Distance Smaller Than 3.0KM Increase Search Distance
+            if float(distances[-1]) >= float(3):
+                print("Final Search Distance: " + distances[-1])
+                print("Total Entries: " + str(len(distances)))
+                break
+
+            else:
+                # Find & Click Button
+                try:
+                    load_more_button = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div[1]/a')
+                    load_more_button.click()
+
+                except:
+                    pass
+
+        except:
+            break
+
+    chrome.close()
 
 # ----------------------------------------------------------------------------------------------------------------------
