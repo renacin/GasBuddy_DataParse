@@ -122,8 +122,9 @@ def find_closest_pc(centroid_df, pc_df):
     # Total Time
     print("Total Time: " + str(round((time.time() - start_time), 4)) + " Seconds")
 
-# This Function Will Parse Data From GasBuddy.com
-def web_scraper(postal_code, fuel_grade):
+# This Function Will Parse Station IDs From GasBuddy.com
+def id_scraper(postal_code, fuel_grade):
+
     ext_1 = r"C:\Users\renac\Documents\Programming\Python\Selenium\Extensions\uBlock-Origin_v1.14.8.crx"
     path = r"C:\Users\renac\Documents\Programming\Python\Selenium\chromedriver"
     web_url = "https://www.gasbuddy.com/home?search=" + postal_code + "&fuel=" + str(fuel_grade)
@@ -141,7 +142,9 @@ def web_scraper(postal_code, fuel_grade):
             chrome.implicitly_wait(20)
 
             # Need To Wait For Page To Load Properly
-            time.sleep(2)
+            time.sleep(5)
+
+            # Parse WebPage Data
             html = chrome.page_source
             soup = BeautifulSoup(html, features="lxml")
 
@@ -150,8 +153,19 @@ def web_scraper(postal_code, fuel_grade):
 
             # If Search Distance Smaller Than 3.0KM Increase Search Distance
             if float(distances[-1]) >= float(3):
-                print("Final Search Distance: " + distances[-1])
-                print("Total Entries: " + str(len(distances)))
+
+                # Get Station IDs, Append To List
+                station_ids = re.findall('station/(\d{1,8})">', str(soup))
+
+                # Check To See If Correct Number Parsed
+                if len(station_ids) == len(distances):
+                    pass
+
+                else:
+                    print("Not All Station IDs Parsed")
+                    raise ValueError
+
+                # Break Out Of While Loop With Data
                 break
 
             else:
@@ -164,8 +178,18 @@ def web_scraper(postal_code, fuel_grade):
                     pass
 
         except:
+            print("Error")
             break
 
     chrome.close()
 
+    try:
+        return station_ids
+    except:
+        station_ids = []
+        return station_ids
+
+# This Function Will Parse Data From The Station List Provided
+def parse_data(id_l):
+    pass
 # ----------------------------------------------------------------------------------------------------------------------
