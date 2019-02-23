@@ -122,17 +122,25 @@ def find_closest_pc(centroid_df, pc_df):
     # Total Time
     print("Total Time: " + str(round((time.time() - start_time), 4)) + " Seconds")
 
-# This Function Will Parse Station IDs From GasBuddy.com
-def id_scraper(postal_code, fuel_grade):
+# ----------------------------------------------------------------------------------------------------------------------
 
+# This Function Will Set Up Chrome
+def set_up_chrome():
     ext_1 = r"C:\Users\renac\Documents\Programming\Python\Selenium\Extensions\uBlock-Origin_v1.14.8.crx"
     path = r"C:\Users\renac\Documents\Programming\Python\Selenium\chromedriver"
-    web_url = "https://www.gasbuddy.com/home?search=" + postal_code + "&fuel=" + str(fuel_grade)
 
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_extension(ext_1)
     chrome_options.add_argument("--disable-infobars")
     chrome = webdriver.Chrome(executable_path=path, chrome_options=chrome_options)
+
+    return chrome
+
+# This Function Will Parse Station IDs From GasBuddy.com
+def id_scraper(postal_code, fuel_grade):
+
+    chrome = set_up_chrome()
+    web_url = "https://www.gasbuddy.com/home?search=" + postal_code + "&fuel=" + str(fuel_grade)
     chrome.get(web_url)
 
     while True:
@@ -190,6 +198,81 @@ def id_scraper(postal_code, fuel_grade):
         return station_ids
 
 # This Function Will Parse Data From The Station List Provided
-def parse_data(id_l):
-    pass
+def get_all_ids(postal_codes, fuel_type):
+
+    # Get Complete List Of Stations
+    station_list = []
+    for postal_code in postal_codes:
+
+        # Print Initial Lenght
+        init_len = len(station_list)
+
+        ids = id_scraper(str(postal_code), fuel_type)
+        station_list.extend(ids)
+
+        # Print Lenght After Addition
+        post_len = len(station_list)
+        print("Stations Parsed: " + str(post_len) + ", Added: " + str(post_len - init_len))
+
+    # Remove Duplicates & Save Data
+    df_ids = pd.DataFrame({"IDS": station_list})
+    df_ids = df_ids.drop_duplicates()
+    df_ids_list = df_ids["IDS"].tolist()
+
+    print("Stations Parsed: " + str(len(df_ids)) + ", Removed: " + str(post_len - len(df_ids)))
+
+    df_ids.to_csv(r"C:\Users\renac\Documents\Programming\Python\GasBuddy_DataParse\Data\Raw_Data\Station_IDS.csv", index=False)
+    print("\n" + "File Written To Disk")
+
+    return df_ids_list
+
+# This Function Will Parse The Data From Each Station Webpage
+def parse_data(station_ids):
+
+    # Set Up Chrome Driver
+    chrome = set_up_chrome()
+    general_path = "https://www.gasbuddy.com/station/"
+
+    # Loop Through Each Station In Station_IDs List
+    for station in station_ids:
+        # Get Path
+        url = general_path + str(station)
+        chrome.get(url)
+
+        # Wait For Page To Load
+        time.sleep(0.5)
+
+        # Parse General Desc Info
+        station_desc = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div/div[1]/div[1]/div[2]')
+        desc_blob = str(station_desc.text)
+
+        # Clean Up General Info
+        desc = desc_blob.replace("\n", " ")
+        desc_list = desc.split(" ")
+
+        # Get Number Of Reviews & Split Index
+        review_num = re.findall("\((.*?)\)", desc)
+        review_str = "(" + review_num[0] + ")"
+        review_index = desc_list.index(review_str)
+
+        # Get Name
+        name = desc_list[:review_index]
+        name = "".join(name)
+
+        # Get Address
+        address_data = desc_list[review_index + 1:-3]
+        address = ""
+        for val in address_data:
+            address = address + val + " "
+
+        # Get City
+        city = desc_list[-3]
+        city = city.replace(",", "")
+
+        print("Station Name: {0}, Reviews: {1}, Address: {2}, City: {3}".format(name, review_num[0], address, city))
+
+    chrome.close()
+
+
+
 # ----------------------------------------------------------------------------------------------------------------------
