@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.options import Options
 import re
 import pandas as pd
 import time
+import datetime
 import math
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -124,6 +125,7 @@ def find_closest_pc(centroid_df, pc_df):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+
 # This Function Will Set Up Chrome
 def set_up_chrome():
     ext_1 = r"C:\Users\renac\Documents\Programming\Python\Selenium\Extensions\uBlock-Origin_v1.14.8.crx"
@@ -135,6 +137,7 @@ def set_up_chrome():
     chrome = webdriver.Chrome(executable_path=path, chrome_options=chrome_options)
 
     return chrome
+
 
 # This Function Will Parse Station IDs From GasBuddy.com
 def id_scraper(postal_code, fuel_grade):
@@ -197,6 +200,7 @@ def id_scraper(postal_code, fuel_grade):
         station_ids = []
         return station_ids
 
+
 # This Function Will Parse Data From The Station List Provided
 def get_all_ids(postal_codes, fuel_type):
 
@@ -226,6 +230,61 @@ def get_all_ids(postal_codes, fuel_type):
 
     return df_ids_list
 
+
+# This Function Will Parse The Text Blob & Return The Fuel Type, Price, & Last Update Time
+def blob_info(text_blob):
+    blob = text_blob.replace("\n", " ")
+    blob_list = blob.split(" ")
+
+    try:
+        # Get Fuel Price
+        fuel_type = blob_list[0]
+
+        # Get Fuel Price
+        fuel_price = blob_list[1]
+        fuel_price = fuel_price.replace("¢", "")
+
+        # Get User That Uploaded Info
+        user = blob_list[3]
+
+        # Get Upload Time, First Get Current Epoch Time
+        time_value = blob_list[-3]
+        time_measure = blob_list[-2]
+
+        epoch_time = int(time.time())
+
+        if time_measure == "day" or time_measure == "days":
+            upload_in_epoch = epoch_time - (int(time_value) * 86400)
+
+        elif time_measure == "hour" or time_measure == "hours":
+            upload_in_epoch = epoch_time - (int(time_value) * 3600)
+
+        elif time_measure == "minute" or time_measure == "minutes":
+            upload_in_epoch = epoch_time - (int(time_value) * 60)
+
+        elif time_measure == "second" or time_measure == "seconds":
+            upload_in_epoch = epoch_time - (int(time_value))
+
+        else:
+            pass
+
+        upload_time = str(datetime.datetime.fromtimestamp(upload_in_epoch))
+        upload_time = upload_time.split(" ")
+
+        upload_date = upload_time[0]
+        upload_time = upload_time[1]
+
+    except:
+        fuel_type = "N/A"
+        fuel_price = "N/A"
+        user = "N/A"
+        upload_date = "N/A"
+        upload_time = "N/A"
+
+    print("Type: {0}, Price: {1}, User: {2}, Date: {3}, Time: {4}".format(fuel_type, fuel_price, user, upload_date, upload_time))
+
+
+
 # This Function Will Parse The Data From Each Station Webpage
 def parse_data(station_ids):
 
@@ -242,11 +301,11 @@ def parse_data(station_ids):
         # Wait For Page To Load
         time.sleep(0.5)
 
-        # Parse General Desc Info
+        # Parse General Desc Info For NumReviews, Name, Address, & City
         station_desc = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div/div[1]/div[1]/div[2]')
         desc_blob = str(station_desc.text)
 
-        # Clean Up General Info
+        # Clean Up Data
         desc = desc_blob.replace("\n", " ")
         desc_list = desc.split(" ")
 
@@ -269,7 +328,25 @@ def parse_data(station_ids):
         city = desc_list[-3]
         city = city.replace(",", "")
 
-        print("Station Name: {0}, Reviews: {1}, Address: {2}, City: {3}".format(name, review_num[0], address, city))
+        # Parse Data For Fuel Prices & Upload Date
+
+        # Regular
+        fuel_1_blob = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div/div[1]/div[2]/div[1]')
+        blob_info(fuel_1_blob.text)
+
+        # MidGrade
+        fuel_1_blob = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div/div[1]/div[2]/div[2]')
+        blob_info(fuel_1_blob.text)
+
+        # Premium
+        fuel_1_blob = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div/div[1]/div[2]/div[3]')
+        blob_info(fuel_1_blob.text)
+
+        # Diesel
+        fuel_1_blob = chrome.find_element_by_xpath('//*[@id="container"]/div/div[3]/div/div/div/div[1]/div[2]/div[4]')
+        blob_info(fuel_1_blob.text)
+
+        #print("Station Name: {0}, Reviews: {1}, Address: {2}, City: {3}".format(name, review_num[0], address, city))
 
     chrome.close()
 
