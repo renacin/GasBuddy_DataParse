@@ -85,6 +85,7 @@ def set_up_chrome(IP_Address, Port):
     # Add Basic Extensions & Settings
     chrome_options = webdriver.ChromeOptions()
     chrome_options.add_extension(ext_1)
+    chrome_options.add_argument("--incognito")
     chrome_options.add_argument("--disable-infobars")
 
     # Change Proxy
